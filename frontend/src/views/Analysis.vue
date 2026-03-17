@@ -5,7 +5,7 @@
       <div class="panel upload-panel">
         <div class="panel-header">
           <span class="panel-dot"></span>
-          <span>代码输入</span>
+          <span>{{ t.analysis.title }}</span>
         </div>
         <div class="panel-tabs">
           <button
@@ -29,15 +29,15 @@
               <path d="M8 32v4a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-4"/>
             </svg>
           </div>
-          <p class="upload-title">拖拽文件至此 或 <span class="upload-link" @click="triggerFile">点击选择</span></p>
-          <p class="upload-hint">支持 .py · .js · .ts · .java · .go · .rs</p>
+          <p class="upload-title">{{ t.analysis.dropHint }} <span class="upload-link" @click="triggerFile">{{ t.analysis.clickSelect }}</span></p>
+          <p class="upload-hint">{{ t.analysis.supportedTypes }}</p>
           <input ref="fileInput" type="file" style="display:none" accept=".py,.js,.ts,.java,.go,.rs" @change="onFileSelect"/>
         </div>
 
         <!-- 路径分析 -->
         <div v-if="activeTab === 'path'" class="path-form">
           <div class="input-group">
-            <label>文件路径</label>
+            <label>{{ t.analysis.filePath }}</label>
             <div class="input-wrap">
               <span class="input-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -46,7 +46,7 @@
             </div>
           </div>
           <button class="cyber-btn" @click="analyzeByPath" :disabled="loading">
-            <span v-if="!loading">开始分析</span>
+            <span v-if="!loading">{{ t.analysis.startAnalysis }}</span>
             <span v-else class="loading-dots"><i></i><i></i><i></i></span>
           </button>
         </div>
@@ -56,7 +56,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
           <span>{{ selectedFile }}</span>
           <button class="analyze-file-btn" @click="analyzeFile" :disabled="loading">
-            {{ loading ? '分析中...' : '分析此文件' }}
+            {{ loading ? t.analysis.analyzing : t.analysis.analyzeFile }}
           </button>
         </div>
       </div>
@@ -65,7 +65,7 @@
       <div class="panel result-panel" v-if="analysisResult">
         <div class="panel-header">
           <span class="panel-dot green"></span>
-          <span>分析结果 — {{ analysisResult.filename }}</span>
+          <span>{{ t.analysis.result }} — {{ analysisResult.filename }}</span>
         </div>
 
         <!-- 分数展示 -->
@@ -109,15 +109,15 @@
     <div class="panel issues-panel" v-if="analysisResult && analysisResult.analysis.issues.length">
       <div class="panel-header">
         <span class="panel-dot pink"></span>
-        <span>发现问题</span>
+        <span>{{ t.analysis.issuesFound }}</span>
         <span class="issue-count">{{ analysisResult.analysis.issues.length }}</span>
       </div>
       <div class="issues-table">
         <div class="issues-head">
-          <span>行号</span>
-          <span>类型</span>
-          <span>问题描述</span>
-          <span>修复建议</span>
+          <span>{{ t.analysis.line }}</span>
+          <span>{{ t.analysis.type }}</span>
+          <span>{{ t.analysis.message }}</span>
+          <span>{{ t.analysis.suggestion }}</span>
         </div>
         <div
           v-for="(issue, i) in analysisResult.analysis.issues"
@@ -144,8 +144,8 @@
           <circle cx="40" cy="45" r="1.5" fill="#00f5ff"/>
         </svg>
       </div>
-      <p class="empty-title">等待代码输入</p>
-      <p class="empty-hint">上传文件或输入路径开始质量分析</p>
+      <p class="empty-title">{{ t.analysis.waitingTitle }}</p>
+      <p class="empty-hint">{{ t.analysis.waitingHint }}</p>
     </div>
   </div>
 </template>
@@ -153,6 +153,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useI18n } from '../i18n/index.js'
+
+const { t } = useI18n()
 
 const activeTab = ref('upload')
 const dragging = ref(false)
@@ -162,17 +165,17 @@ const analysisResult = ref(null)
 const loading = ref(false)
 const pathForm = ref({ filePath: '' })
 
-const tabs = [
-  { key: 'upload', label: '上传文件' },
-  { key: 'path', label: '路径分析' }
-]
+const tabs = computed(() => [
+  { key: 'upload', label: t.value.analysis.upload },
+  { key: 'path',   label: t.value.analysis.path   }
+])
 
-const dimLabels = {
-  maintainability: '可维护性',
-  readability: '可读性',
-  security: '安全性',
-  performance: '性能'
-}
+const dimLabels = computed(() => ({
+  maintainability: t.value.analysis.dim_maintainability,
+  readability:     t.value.analysis.dim_readability,
+  security:        t.value.analysis.dim_security,
+  performance:     t.value.analysis.dim_performance,
+}))
 
 const scoreColor = computed(() => {
   const s = analysisResult.value?.quality_score.total_score || 0
@@ -222,14 +225,14 @@ const mockAnalyze = (filename) => {
       }
     }
     loading.value = false
-    ElMessage({ message: '分析完成！', type: 'success', customClass: 'cyber-toast' })
+    ElMessage({ message: t.value.analysis.analysisDone, type: 'success', customClass: 'cyber-toast' })
   }, 1200)
 }
 
 const analyzeFile = () => selectedFile.value && mockAnalyze(selectedFile.value)
 
 const analyzeByPath = () => {
-  if (!pathForm.value.filePath) { ElMessage.warning('请输入文件路径'); return }
+  if (!pathForm.value.filePath) { ElMessage.warning(t.value.analysis.enterPath); return }
   mockAnalyze(pathForm.value.filePath.split('/').pop())
 }
 </script>
