@@ -1,0 +1,19 @@
+# Global code owners - All files require review from teng00123
+* @teng00123
+
+# Critical files requiring additional attention
+/backend/core/ @teng00123
+/docker-compose.yml @teng00123
+/.github/workflows/ @teng00123
+/requirements.txt @teng00123
+/backend/main.py @teng00123
+
+# Configuration files
+*.yml @teng00123
+*.yaml @teng00123
+*.json @teng00123
+*.py @teng00123
+
+# Documentation files
+*.md @teng00123
+/docs/ @teng00123
