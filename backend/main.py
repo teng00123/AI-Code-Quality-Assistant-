@@ -50,10 +50,10 @@ class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
 app.add_middleware(PrivateNetworkAccessMiddleware)
 
 # 注册路由
-app.include_router(health_router)
-app.include_router(analysis_router)
-app.include_router(llm_router)
-app.include_router(qwen_router)
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(analysis_router, prefix="/api/v1")
+app.include_router(llm_router, prefix="/api/v1")
+app.include_router(qwen_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
