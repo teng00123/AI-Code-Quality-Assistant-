@@ -89,11 +89,15 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
+import { useSettingsStore } from './store/settings.js'
 
 const route = useRoute()
 const bgCanvas = ref(null)
 const sidebarCollapsed = ref(false)
 const currentTime = ref('')
+
+// 接入设置 store — 启动时自动应用主题/语言（store 内部 watch immediate）
+useSettingsStore()
 
 const navItems = [
   {
