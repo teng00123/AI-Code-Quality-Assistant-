@@ -4,22 +4,12 @@ import ast
 import re
 import os
 from typing import Dict, List, Any, Tuple
-from dataclasses import dataclass
 from enum import Enum
+from dataclasses import dataclass
 
-class IssueType(Enum):
-    ERROR = "error"
-    WARNING = "warning"
-    INFO = "info"
-
-@dataclass
-class CodeIssue:
-    line: int
-    column: int
-    message: str
-    issue_type: IssueType
-    rule_id: str
-    suggestion: str = ""
+# 导入共享模型和JavaScript分析器
+from ..models import CodeIssue, IssueType
+from .javascript_analyzer import JavaScriptAnalyzer
 
 class StaticAnalyzer:
     """静态代码分析器"""
@@ -50,6 +40,9 @@ class StaticAnalyzer:
         
         if language == 'python':
             issues.extend(self._analyze_python_ast(content))
+        elif language == 'javascript':
+            js_analyzer = JavaScriptAnalyzer()
+            issues.extend(js_analyzer.analyze(content, file_path))
         
         issues.extend(self._analyze_with_regex(content, file_path))
         issues.extend(self._analyze_complexity(content, file_path))

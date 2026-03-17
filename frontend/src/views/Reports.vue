@@ -100,4 +100,53 @@ const viewReport = (report) => {
 }
 
 const deleteReport = (report) => {
-  ElMessageBox.confirm(`确定删除报告 
+  ElMessageBox.confirm(
+    `确定删除报告 "${report.filename}"？`,
+    '确认删除',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    const index = reports.value.findIndex(r => r.id === report.id)
+    if (index !== -1) {
+      reports.value.splice(index, 1)
+      totalReports.value--
+      ElMessage.success('报告已删除')
+    }
+  }).catch(() => {
+    ElMessage.info('已取消删除')
+  })
+}
+
+const exportReport = () => {
+  ElMessage.success('报告导出中...')
+}
+
+const handleSizeChange = (val) => {
+  pageSize.value = val
+}
+
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+}
+</script>
+
+<style scoped>
+.reports {
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pagination-wrapper {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+</style>
