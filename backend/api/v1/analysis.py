@@ -76,16 +76,30 @@ async def analyze_uploaded_file(
             raise HTTPException(status_code=400, detail=analysis_data['error'])
         
         quality_score = quality_scorer.calculate_score(analysis_data)
-        
+
+        # 生成 analysis_id，统一存入内存，与 /file 接口保持一致
+        analysis_id = str(uuid.uuid4())
+        created_at  = datetime.now().isoformat()
+
+        result = {
+            "analysis_id":   analysis_id,
+            "file_path":     analysis_data.get('file_path', file.filename),
+            "filename":      file.filename,
+            "language":      analysis_data.get('language', ''),
+            "lines_of_code": analysis_data.get('lines_of_code', 0),
+            "issues":        analysis_data.get('issues', []),
+            "summary":       analysis_data.get('summary', {}),
+            "quality_score": quality_score,
+            "created_at":    created_at,
+        }
+
+        # 存入内存，Reports 页可读取
+        analysis_results[analysis_id] = result
+
         if background_tasks:
             background_tasks.add_task(os.remove, temp_file_path)
         
-        return {
-            "success": True,
-            "analysis": analysis_data,
-            "quality_score": quality_score,
-            "filename": file.filename
-        }
+        return {"success": True, "data": result}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -99,7 +113,7 @@ async def get_analysis_result(analysis_id: str):
     return {"success": True, "data": analysis_results[analysis_id]}
 
 @router.get("/")
-async def list_analysis_results(limit: int = 10):
+async def list_analysis_results(limit: int = 100):
     """列出分析结果"""
     results = list(analysis_results.values())[-limit:]
     return {
