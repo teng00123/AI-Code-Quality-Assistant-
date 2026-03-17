@@ -154,12 +154,14 @@
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from '../i18n/index.js'
+import { analysisApi } from '../api/index.js'
 
 const { t } = useI18n()
 
 const activeTab = ref('upload')
 const dragging = ref(false)
 const selectedFile = ref('')
+const selectedFileObj = ref(null)
 const fileInput = ref(null)
 const analysisResult = ref(null)
 const loading = ref(false)
@@ -196,44 +198,50 @@ const triggerFile = () => fileInput.value?.click()
 
 const onFileSelect = (e) => {
   const file = e.target.files[0]
-  if (file) selectedFile.value = file.name
+  if (file) { selectedFile.value = file.name; selectedFileObj.value = file }
 }
 
 const onDrop = (e) => {
   dragging.value = false
   const file = e.dataTransfer.files[0]
-  if (file) selectedFile.value = file.name
+  if (file) { selectedFile.value = file.name; selectedFileObj.value = file }
 }
 
-const mockAnalyze = (filename) => {
+const handleResult = (res) => {
+  // 统一后端返回格式
+  const data = res.data ?? res
+  analysisResult.value = {
+    filename:      data.filename ?? data.file_path?.split('/').pop() ?? '—',
+    analysis:      { issues: data.issues ?? [] },
+    quality_score: data.quality_score ?? { total_score: 0, grade: '—', dimensions: {} }
+  }
+  ElMessage({ message: t.value.analysis.analysisDone, type: 'success', customClass: 'cyber-toast' })
+}
+
+const analyzeFile = async () => {
+  if (!selectedFileObj.value) return
   loading.value = true
-  setTimeout(() => {
-    analysisResult.value = {
-      filename,
-      analysis: {
-        issues: [
-          { line: 10, type: 'error', message: '发现硬编码密码', suggestion: '使用环境变量存储敏感信息' },
-          { line: 25, type: 'warning', message: '函数过长（超过50行）', suggestion: '拆分为更小的独立函数' },
-          { line: 42, type: 'warning', message: '缺少错误处理', suggestion: '添加 try-catch 异常处理' },
-          { line: 67, type: 'info', message: '变量命名不规范', suggestion: '使用 camelCase 命名规范' }
-        ]
-      },
-      quality_score: {
-        total_score: 85,
-        grade: 'B',
-        dimensions: { maintainability: 80, readability: 85, security: 90, performance: 85 }
-      }
-    }
+  try {
+    const res = await analysisApi.analyzeUpload(selectedFileObj.value)
+    handleResult(res)
+  } catch (e) {
+    ElMessage.error(`分析失败：${e.message}`)
+  } finally {
     loading.value = false
-    ElMessage({ message: t.value.analysis.analysisDone, type: 'success', customClass: 'cyber-toast' })
-  }, 1200)
+  }
 }
 
-const analyzeFile = () => selectedFile.value && mockAnalyze(selectedFile.value)
-
-const analyzeByPath = () => {
+const analyzeByPath = async () => {
   if (!pathForm.value.filePath) { ElMessage.warning(t.value.analysis.enterPath); return }
-  mockAnalyze(pathForm.value.filePath.split('/').pop())
+  loading.value = true
+  try {
+    const res = await analysisApi.analyzeByPath(pathForm.value.filePath)
+    handleResult(res)
+  } catch (e) {
+    ElMessage.error(`分析失败：${e.message}`)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
