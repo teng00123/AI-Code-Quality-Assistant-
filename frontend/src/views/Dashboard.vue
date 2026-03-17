@@ -35,16 +35,16 @@
         <div class="card-header">
           <div class="card-title">
             <span class="card-dot"></span>
-            质量评分趋势
+            {{ t.dashboard.trend }}
           </div>
           <div class="card-tabs">
             <button
-              v-for="t in ['7天', '30天', '90天']"
-              :key="t"
+              v-for="tab in tabOptions"
+              :key="tab.key"
               class="tab-btn"
-              :class="{ active: activeTab === t }"
-              @click="activeTab = t"
-            >{{ t }}</button>
+              :class="{ active: activeTab === tab.key }"
+              @click="activeTab = tab.key"
+            >{{ tab.label }}</button>
           </div>
         </div>
         <div ref="lineRef" class="chart-area"></div>
@@ -55,7 +55,7 @@
         <div class="card-header">
           <div class="card-title">
             <span class="card-dot pink"></span>
-            问题类型分布
+            {{ t.dashboard.distribution }}
           </div>
         </div>
         <div ref="pieRef" class="chart-area"></div>
@@ -69,7 +69,7 @@
         <div class="card-header">
           <div class="card-title">
             <span class="card-dot green"></span>
-            质量维度雷达
+            {{ t.dashboard.radar }}
           </div>
         </div>
         <div ref="radarRef" class="chart-area"></div>
@@ -80,7 +80,7 @@
         <div class="card-header">
           <div class="card-title">
             <span class="card-dot purple"></span>
-            最近分析记录
+            {{ t.dashboard.recent }}
           </div>
         </div>
         <div class="recent-list">
@@ -102,17 +102,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import * as echarts from 'echarts'
+import { useI18n } from '../i18n/index.js'
+
+const { t } = useI18n()
 
 const lineRef = ref(null)
 const pieRef = ref(null)
 const radarRef = ref(null)
-const activeTab = ref('7天')
+const activeTab = ref('7d')
 
-const metrics = [
+const metrics = computed(() => [
   {
-    label: '平均质量分数',
+    label: t.value.dashboard.avgScore,
     value: '85.2',
     unit: '/ 100',
     trend: 3.2,
@@ -121,25 +125,25 @@ const metrics = [
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`
   },
   {
-    label: '分析文件总数',
+    label: t.value.dashboard.totalFiles,
     value: '127',
-    unit: '个',
+    unit: t.value.dashboard.files,
     trend: 12.5,
     color: '#7b2ff7',
     colorRgb: '123,47,247',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>`
   },
   {
-    label: '发现问题',
+    label: t.value.dashboard.issues,
     value: '23',
-    unit: '处',
+    unit: t.value.dashboard.issues_unit,
     trend: -8.1,
     color: '#ff006e',
     colorRgb: '255,0,110',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
   },
   {
-    label: '代码覆盖率',
+    label: t.value.dashboard.coverage,
     value: '92',
     unit: '%',
     trend: 2.4,
@@ -147,7 +151,13 @@ const metrics = [
     colorRgb: '0,255,136',
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20,6 9,17 4,12"/></svg>`
   }
-]
+])
+
+const tabOptions = computed(() => [
+  { key: '7d',  label: t.value.dashboard.days7  },
+  { key: '30d', label: t.value.dashboard.days30 },
+  { key: '90d', label: t.value.dashboard.days90 },
+])
 
 const recentItems = [
   { name: 'main.py', ext: '.py', score: 85, grade: 'B', color: '#00f5ff' },
@@ -158,9 +168,9 @@ const recentItems = [
 ]
 
 const trendData = {
-  '7天':  [80, 83, 81, 86, 84, 87, 85],
-  '30天': [72, 75, 78, 80, 79, 83, 82, 85, 84, 86, 85, 88, 87, 85, 89, 88, 86, 90, 88, 87, 85, 88, 90, 87, 86, 88, 89, 87, 85, 85],
-  '90天': [68, 72, 74, 76, 75, 78, 79, 81, 80, 83, 82, 85, 84, 86, 85, 87, 86, 88, 87, 89, 88, 87, 90, 89, 88, 90, 89, 91, 90, 85]
+  '7d':  [80, 83, 81, 86, 84, 87, 85],
+  '30d': [72, 75, 78, 80, 79, 83, 82, 85, 84, 86, 85, 88, 87, 85, 89, 88, 86, 90, 88, 87, 85, 88, 90, 87, 86, 88, 89, 87, 85, 85],
+  '90d': [68, 72, 74, 76, 75, 78, 79, 81, 80, 83, 82, 85, 84, 86, 85, 87, 86, 88, 87, 89, 88, 87, 90, 89, 88, 90, 89, 91, 90, 85]
 }
 
 let charts = []
@@ -225,14 +235,14 @@ const createPie = () => {
     },
     legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: '#64748b' } },
     series: [{
-      name: '问题',
+      name: t.value.dashboard.issues,
       type: 'pie',
       radius: ['45%', '70%'],
       center: ['40%', '50%'],
       data: [
-        { value: 12, name: '错误', itemStyle: { color: '#ff006e', shadowBlur: 15, shadowColor: '#ff006e' } },
-        { value: 8, name: '警告', itemStyle: { color: '#ffaa00', shadowBlur: 15, shadowColor: '#ffaa00' } },
-        { value: 3, name: '信息', itemStyle: { color: '#00f5ff', shadowBlur: 15, shadowColor: '#00f5ff' } }
+        { value: 12, name: t.value.dashboard.error,   itemStyle: { color: '#ff006e', shadowBlur: 15, shadowColor: '#ff006e' } },
+        { value: 8,  name: t.value.dashboard.warning, itemStyle: { color: '#ffaa00', shadowBlur: 15, shadowColor: '#ffaa00' } },
+        { value: 3,  name: t.value.dashboard.info,    itemStyle: { color: '#00f5ff', shadowBlur: 15, shadowColor: '#00f5ff' } }
       ],
       label: { show: false },
       emphasis: { scale: true, scaleSize: 6 }
@@ -249,12 +259,12 @@ const createRadar = () => {
     tooltip: { backgroundColor: 'rgba(3,7,18,0.9)', borderColor: 'rgba(0,245,255,0.3)', textStyle: { color: '#e2e8f0' } },
     radar: {
       indicator: [
-        { name: '可维护性', max: 100 },
-        { name: '可读性', max: 100 },
-        { name: '安全性', max: 100 },
-        { name: '性能', max: 100 },
-        { name: '可测试性', max: 100 },
-        { name: '文档完整性', max: 100 }
+        { name: t.value.dashboard.maintainability, max: 100 },
+        { name: t.value.dashboard.readability,     max: 100 },
+        { name: t.value.dashboard.security,        max: 100 },
+        { name: t.value.dashboard.performance,     max: 100 },
+        { name: t.value.dashboard.testability,     max: 100 },
+        { name: t.value.dashboard.documentation,   max: 100 }
       ],
       center: ['50%', '52%'],
       radius: '65%',
@@ -267,7 +277,7 @@ const createRadar = () => {
       type: 'radar',
       data: [{
         value: [80, 85, 90, 85, 70, 75],
-        name: '当前项目',
+        name: t.value.dashboard.radar,
         lineStyle: { color: '#00ff88', width: 2, shadowBlur: 8, shadowColor: '#00ff88' },
         areaStyle: { color: 'rgba(0,255,136,0.1)' },
         itemStyle: { color: '#00ff88' }
@@ -285,6 +295,15 @@ watch(activeTab, () => {
     const labels = data.map((_, i) => `D-${data.length - 1 - i}`)
     lineChart.setOption({ xAxis: { data: labels }, series: [{ data }] })
   }
+})
+
+// 语言切换时重绘图表
+watch(t, () => {
+  charts.forEach(c => c.dispose())
+  charts = []
+  lineChart = createLine()
+  createPie()
+  createRadar()
 })
 
 const onResize = () => charts.forEach(c => c.resize())
