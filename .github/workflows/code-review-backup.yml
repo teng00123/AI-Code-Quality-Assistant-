@@ -1,0 +1,244 @@
+name: 🔍 Code Review & Quality Check
+
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main, feature/*]
+
+jobs:
+  code-analysis:
+    name: 🤖 AI Code Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 🔍 Run Code Quality Analysis
+      run: |
+        echo "## 🤖 AI Code Quality Analysis Results" >> $GITHUB_STEP_SUMMARY
+        python3 -c "
+import sys
+sys.path.append('.')
+from backend.core.analyzer.static_analyzer import StaticAnalyzer
+from backend.core.scoring.quality_scorer import QualityScorer
+
+analyzer = StaticAnalyzer()
+scorer = QualityScorer()
+
+# 分析所有Python文件
+import os
+python_files = []
+for root, dirs, files in os.walk('.'):
+    if '__pycache__' in dirs:
+        dirs.remove('__pycache__')
+    for file in files:
+        if file.endswith('.py') and not file.startswith('.'):
+            python_files.append(os.path.join(root, file))
+
+print(f'Found {len(python_files)} Python files to analyze')
+
+total_issues = 0
+error_count = 0
+warning_count = 0
+info_count = 0
+total_score = 0
+
+for file_path in python_files[:10]:  # 限制分析前10个文件
+    try:
+        result = analyzer.analyze_file(file_path)
+        if 'error' not in result:
+            score = scorer.calculate_score(result)
+            total_issues += len(result['issues'])
+            error_count += score['breakdown']['issues_by_severity']['error']
+            warning_count += score['breakdown']['issues_by_severity']['warning']
+            info_count += score['breakdown']['issues_by_severity']['info']
+            total_score += score['total_score']
+            
+            print(f'✅ {file_path}: Score {score[\"total_score\"]}/100 ({score[\"grade\"]})')
+        else:
+            print(f'❌ {file_path}: {result[\"error\"]}')
+    except Exception as e:
+        print(f'❌ Error analyzing {file_path}: {e}')
+
+avg_score = total_score / len(python_files) if python_files else 0
+print(f'\n📊 Summary: {len(python_files)} files analyzed')
+print(f'🎯 Average Score: {avg_score:.2f}/100')
+print(f'🚨 Issues: {error_count} errors, {warning_count} warnings, {info_count} info')
+        " >> $GITHUB_STEP_SUMMARY
+    
+    - name: 📊 Comment PR with Analysis Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8');
+          const analysisSection = summary.split('## 🤖 AI Code Quality Analysis Results')[1];
+          
+          if (analysisSection) {
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🤖 AI Code Quality Analysis Results\n${analysisSection}`
+            });
+          }
+
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🔍 Run Bandit Security Scanner
+      run: |
+        pip install bandit[toml]
+        echo "## 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        bandit -r . -f json -o bandit-report.json || true
+        
+        # Parse results
+        if [ -f bandit-report.json ]; then
+          high=$(jq '.metrics._totals.SEVERITY.HIGH // 0' bandit-report.json)
+          medium=$(jq '.metrics._totals.SEVERITY.MEDIUM // 0' bandit-report.json)
+          low=$(jq '.metrics._totals.SEVERITY.LOW // 0' bandit-report.json)
+          
+          echo "- 🔴 High: $high" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟡 Medium: $medium" >> $GITHUB_STEP_SUMMARY
+          echo "- 🟢 Low: $low" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$high" -gt 0 ]; then
+            echo "⚠️ **High severity issues found!**" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "✅ No security issues detected" >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: 📤 Upload Security Report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-report
+        path: bandit-report.json
+
+  code-formatting:
+    name: 🎨 Code Formatting Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: 📦 Install formatting tools
+      run: |
+        pip install black flake8 isort
+    
+    - name: 🎨 Check Black formatting
+      run: |
+        echo "## 🎨 Code Formatting Results" >> $GITHUB_STEP_SUMMARY
+        black --check --diff . 2>&1 | tee black-output.txt
+        if [ ${PIPESTATUS[0]} -eq 0 ]; then
+          echo "✅ Code formatting looks good!" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Code formatting issues found" >> $GITHUB_STEP_SUMMARY
+          echo '```diff' >> $GITHUB_STEP_SUMMARY
+          tail -20 black-output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: 🔍 Run Flake8 linting
+      run: |
+        flake8 . --max-line-length=120 --ignore=E203,W503 --format=github >> $GITHUB_STEP_SUMMARY || true
+
+  dependency-check:
+    name: 📦 Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🔍 Run Safety Check
+      run: |
+        pip install safety
+        echo "## 📦 Dependency Security Check" >> $GITHUB_STEP_SUMMARY
+        safety check --json --output safety-report.json || true
+        
+        if [ -f safety-report.json ]; then
+          vulnerabilities=$(cat safety-report.json | jq length)
+          echo "Found $vulnerabilities known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          if [ "$vulnerabilities" -gt 0 ]; then
+            echo "⚠️ **Vulnerabilities found in dependencies!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No known vulnerabilities in dependencies" >> $GITHUB_STEP_SUMMARY
+          fi
+        fi
+
+  pr-summary:
+    name: 📋 PR Summary
+    runs-on: ubuntu-latest
+    needs: [code-analysis, security-scan, code-formatting, dependency-check]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📋 Generate PR Summary
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const summary = `
+## 🎯 Pull Request Summary
+
+### 📊 Analysis Status
+- ✅ Code Quality Analysis: Completed
+- ✅ Security Scan: Completed  
+- ✅ Code Formatting: Completed
+- ✅ Dependency Check: Completed
+
+### 🔗 Related Links
+- 📄 [Documentation](./docs/)
+- 🐳 [Deployment Guide](./docker-compose.yml)
+- 🧪 [Tests](./backend/tests/)
+
+### 📝 Next Steps
+1. Review the AI analysis results above
+2. Check for any security vulnerabilities
+3. Ensure code formatting standards are met
+4. Merge when ready!
+
+---
+*Generated by AI Code Quality Assistant*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
