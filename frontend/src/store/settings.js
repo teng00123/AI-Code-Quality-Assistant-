@@ -20,8 +20,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const theme = ref(saved?.theme ?? 'dark')
   const refreshInterval = ref(saved?.refreshInterval ?? 60)
 
-  // API 设置
-  const apiBaseURL = ref(saved?.apiBaseURL ?? 'localhost:8000')
+  // API 设置（自动迁移旧的 localhost 默认值）
+  const defaultApiBase = '21.91.24.193:8000'
+  const savedApiBase = saved?.apiBaseURL
+  const apiBaseURL = ref(
+    (!savedApiBase || savedApiBase === 'localhost:8000') ? defaultApiBase : savedApiBase
+  )
   const apiTimeout = ref(saved?.apiTimeout ?? 10000)
   const httpsEnabled = ref(saved?.httpsEnabled ?? false)
 
@@ -72,7 +76,7 @@ export const useSettingsStore = defineStore('settings', () => {
     language.value = 'zh-CN'
     theme.value = 'dark'
     refreshInterval.value = 60
-    apiBaseURL.value = 'localhost:8000'
+    apiBaseURL.value = '21.91.24.193:8000'
     apiTimeout.value = 10000
     httpsEnabled.value = false
     notifAnalysisComplete.value = true

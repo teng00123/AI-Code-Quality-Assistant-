@@ -4,8 +4,10 @@ import os
 import sys
 sys.path.append('.')
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.v1 import analysis_router, health_router, llm_router, qwen_router
 
@@ -24,6 +26,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Private Network Access 响应头中间件
+# 允许公网页面访问 loopback / 私有网络地址
+class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # 预检请求：直接返回 200 + 授权头
+        if request.method == "OPTIONS" and \
+           request.headers.get("Access-Control-Request-Private-Network") == "true":
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
+                    "Access-Control-Allow-Private-Network": "true",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                }
+            )
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+        return response
+
+app.add_middleware(PrivateNetworkAccessMiddleware)
 
 # 注册路由
 app.include_router(health_router)
