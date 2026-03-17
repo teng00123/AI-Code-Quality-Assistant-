@@ -1,0 +1,14 @@
+# Global owners - 所有文件都需要这些用户审批
+* @teng00123
+
+# 关键文件需要额外审批
+/backend/core/ @teng00123
+/docker-compose.yml @teng00123
+/.github/workflows/ @teng00123
+/requirements.txt @teng00123
+
+# 配置文件
+*.yml @teng00123
+*.yaml @teng00123
+*.json @teng00123
+*.py @teng00123
