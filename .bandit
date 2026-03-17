@@ -1,0 +1,13 @@
+[tool.bandit]
+# 排除的目录和文件
+exclude_dirs = ["tests", "venv", "env", "__pycache__", ".git"]
+
+# 测试的跳过列表
+skips = [
+    "B101",  # assert_used
+    "B601",  # paramiko_calls
+]
+
+# 严重性级别
+severity = "medium"
+confidence = "medium"
